@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using Microsoft.Diagnostics.NETCore.Client;
 using ServiceProfiler.EventPipe.UserApp30;
 
@@ -17,7 +18,13 @@ public class ProfilerService : BackgroundService
     {
         int pid = Process.GetCurrentProcess().Id;
         List<EventPipeProvider> providers = new List<EventPipeProvider>{
+            
+            // Custom EventPipe Providers
             new EventPipeProvider(ProfilerTestEventSource.DisplayName, System.Diagnostics.Tracing.EventLevel.Verbose, 0x1, null),
+            
+            // Counters
+            new EventPipeProvider("System.Runtime", EventLevel.Verbose, 0xFFFFFFFFFFFF, new Dictionary<string,string>(){ ["EventCounterIntervalSec"] = "1"}),
+            new EventPipeProvider("System.Net.Sockets", EventLevel.Informational, 0x0, new Dictionary<string,string>(){ ["EventCounterIntervalSec"] = "1"}),
         };
 
         DiagnosticsClient client = new DiagnosticsClient(pid);
