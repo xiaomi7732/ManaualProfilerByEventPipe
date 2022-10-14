@@ -15,7 +15,7 @@ public class ProfilerService : BackgroundService
         List<EventPipeProvider> providers = new List<EventPipeProvider>{
             new EventPipeProvider(ProfilerTestEventSource.DisplayName, System.Diagnostics.Tracing.EventLevel.Verbose, 0x1, null),
         };
-        
+
         stoppingToken.Register(() =>
                 {
                     if (_activeSession is not null)
