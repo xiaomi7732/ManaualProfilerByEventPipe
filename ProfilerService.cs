@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.Tracing;
 using Microsoft.Diagnostics.NETCore.Client;
 using ServiceProfiler.EventPipe.UserApp30;
 
@@ -7,7 +6,12 @@ namespace ManualProfiler;
 
 public class ProfilerService : BackgroundService
 {
-    EventPipeSession? _activeSession = null;
+    private readonly ILogger _logger;
+    private const string _outputFileName = "output.nettrace";
+    public ProfilerService(ILogger<ProfilerService> logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -16,31 +20,22 @@ public class ProfilerService : BackgroundService
             new EventPipeProvider(ProfilerTestEventSource.DisplayName, System.Diagnostics.Tracing.EventLevel.Verbose, 0x1, null),
         };
 
-        stoppingToken.Register(() =>
-                {
-                    if (_activeSession is not null)
-                    {
-                        Console.WriteLine("Stopping Profiler");
-                        _activeSession.Stop();
-
-                        Console.WriteLine("Profiler Stopped.");
-                    }
-                });
-
-
         DiagnosticsClient client = new DiagnosticsClient(pid);
-
-        _activeSession = client.StartEventPipeSession(providers, true, 256);
-
-        using (Stream writeTo = new FileStream("output.nettrace", FileMode.Create))
+        using EventPipeSession session = client.StartEventPipeSession(providers, true, 256);
+        stoppingToken.Register(() =>
         {
-            await _activeSession.EventStream.CopyToAsync(writeTo);
-            await _activeSession.EventStream.FlushAsync();
-            _activeSession.Dispose();
+            if (session is not null)
+            {
+                _logger.LogInformation("Stopping Profiler");
+                session.Stop();
+                _logger.LogInformation("Profiler Stopped. Trace file: {outputFile}", _outputFileName);
+            }
+        });
+
+        _logger.LogInformation("Start profiling. Writing to: {outputFile}", _outputFileName);
+        using (Stream writeTo = new FileStream(_outputFileName, FileMode.Create))
+        {
+            await session.EventStream.CopyToAsync(writeTo);
         }
-
-
-
-        Console.WriteLine("Start profiling");
     }
 }

@@ -2,6 +2,10 @@ using ManualProfiler;
 using ServiceProfiler.EventPipe.UserApp30;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddSimpleConsole(opt =>
+{
+    opt.SingleLine = true;
+});
 
 // Add services to the container.
 builder.Services.AddHostedService<HeartBeatService>();
